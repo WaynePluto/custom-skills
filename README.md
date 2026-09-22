@@ -6,8 +6,8 @@
 
 - **Python >= 3.10**
 - **Node.js >= 20**（部分技能需要）
-- **uv**（browser-harness 需要；没有时 sync 会跳过该段）
-- **本机安装的 Chrome 或 Edge**（浏览器类技能需要；browser-harness 仅支持 Chrome）
+- **uv**（browser-use 与 computer-use 通过它准备隔离运行时；没有时 sync 会跳过对应段）
+- **本机安装的 Chrome**（浏览器能力需要；local-web-search 还要求当前 Agent 能操作用户已授权的有界面个人 Chrome Profile，Chrome 不可用时才按工具能力降级到其他已授权的本机有界面浏览器）
 - **Windows + PowerShell 7（pwsh）**：项目中的脚本、SKILL 命令示例和 context 文件默认面向 Windows 上的 PowerShell 7 编写，Shell 命令使用 pwsh 7 语法；在其他 OS / Shell 下使用时需自行改写相应命令
 
 ## 快速开始
@@ -25,7 +25,8 @@ python scripts/install.py
 - Context：将 `context/` 下的 `APPEND_SYSTEM.md` 部署到 `~/.pi/agent/`
 - 二进制：确保 `grep`、`find` 依赖的 `rg`、`fd` 存在于 `~/.pi/agent/bin/`
 - 扩展：将 `extensions/` 下的 Pi 扩展部署到 `~/.pi/agent/extensions/`
-- browser-harness：通过 uv 安装/升级 CLI，并把生成的 SKILL.md 同步到仓库与全局技能目录
+- browser-use：通过 uv 安装/升级官方 browser-harness 包，同步 Chrome 专用 SKILL.md、适配脚本和上游参考说明（普通 sync 也刷新，无需 --force）
+- computer-use：在独立 Python 3.13 环境安装哈希锁定的 cua-driver SDK，校验绑定和原生文件后同步后台限定桌面技能；不注册启动任务或常驻服务
 
 `project-skills/` 中的项目级技能不会被默认安装，必须显式指定技能名称和目标项目。
 
@@ -66,8 +67,14 @@ python scripts/install.py --extensions --force
 # 只检查二进制依赖，有新版时询问是否升级
 python scripts/install.py --binaries
 
-# 只安装/升级 browser-harness 并同步其 SKILL.md（升级不询问）
+# 安装/升级全部工具型技能及其运行时
 python scripts/install.py --tools
+
+# 只准备 computer-use 运行时并刷新该技能（不要求 Node/pnpm）
+python scripts/install.py --tools --name computer-use
+
+# 只更新 browser-harness 并刷新 browser-use
+python scripts/install.py --tools --name browser-use
 ```
 
 ### 自定义安装目录
@@ -90,8 +97,9 @@ pnpm test             # 跑全部静态测试（Node + Python）
 
 | 技能 | 作用域 | 说明 |
 |---|---|---|
-| [browser-harness](skills/browser-harness/) | 全局 | 通过 browser-harness CLI 以 CDP 控制本机真实 Chrome；SKILL.md 由 CLI 生成，`sync` 负责升级 |
-| [local-web-search](skills/local-web-search/) | 全局 | 使用本机 Chrome/Edge 进行实时网络搜索、网页阅读和多来源核实 |
+| [browser-use](skills/browser-use/README.md) | 全局 | 个人 Chrome 技能，依赖 browser-harness 并复用其 CDP/helpers，连接 Windows 稳定版个人 Chrome；`sync` 生成说明并刷新适配脚本 |
+| [computer-use](skills/computer-use/README.md) | 全局 | Windows 原生 GUI 单步操作技能；直接使用 cua-driver 同进程 SDK，默认后台限定，不启动 MCP Server 或常驻 daemon，保留快照重验证、请求去重和有界 JSON |
+| [local-web-search](skills/local-web-search/) | 全局 | 通用本地浏览器搜索工作流；默认使用有界面个人 Chrome Profile、Bing 国际版优先，支持用户手动登录后继续，无独立运行时依赖 |
 | [pixel2ase](project-skills/pixel2ase/) | 项目级 | 将 AI 生成的像素风图片转换为原生分辨率 PNG 和 indexed `.aseprite` 工程 |
 
 ## 扩展列表
@@ -173,8 +181,9 @@ custom-skills/
 │   └── services/            # 同上：常驻服务管理（目录形式，services.ts 为入口）
 ├── tests/
 │   ├── *.test.mjs           # 扩展的静态测试（不部署）
-│   └── test_*.py            # install.py 的静态测试
+│   └── test_*.py            # 技能与安装逻辑的静态测试
 ├── skills/                    # 默认安装到全局目录
+│   ├── browser-use/           # 个人 Chrome 技能，依赖 browser-harness
 │   └── <skill-name>/
 │       ├── SKILL.md           # 技能定义（Agent 读取）
 │       ├── README.md          # 人类可读说明
@@ -195,7 +204,7 @@ custom-skills/
 
 ### Skills
 
-1. **依赖下载**：在技能源码目录执行 `pnpm install`，获取构建工具和运行时依赖。
+1. **依赖下载**：仅当技能包含 `package.json` 时，在仓库根执行 `pnpm install --ignore-scripts`；纯工作流技能无需安装运行时依赖。computer-use 的 Python 运行时由 `--tools` 单独管理，并要求锁文件哈希与适配指纹同时通过。
 2. **部署全局技能**：将 `skills/` 中选中的技能复制到全局目录。
 3. **部署项目级技能**：仅在同时提供 `--project-skills --project-dir <目录> --name <技能>` 时，将 `project-skills/<技能>/` 复制到目标项目的 `.agents/skills/<技能>/`。
 4. **隔离作用域**：默认安装不会扫描或安装 `project-skills/`。
@@ -260,30 +269,35 @@ python -m unittest discover -s tests -p 'test_*.py'
 
 开发阶段的 `node_modules/`、`dist/`、lock 文件均不纳入 Git。
 
-### Browser harness
+### Local web search
 
-browser-harness 以 `uv tool` 形式安装（uv 自管 Python 3.12），`skills/browser-harness/SKILL.md` 不是手写的，而是每次 sync 由 `browser-harness skill` 重新生成：仓库副本进 Git（可审查版本间工作流变化），全局副本同步刷新。frontmatter 的 `name` / `description` 由 `skills/browser-harness/skill-overrides.json` 覆盖（官方默认 "Always use ..." 会过度触发），`skill-overrides.json` 属于 sync 元数据，不会随技能部署。
+local-web-search 是通用工作流，不绑定浏览器技能名或 Agent，也不再自带浏览器驱动和子 Agent 启动器。默认使用用户已授权的本机有界面个人 Chrome Profile，不主动启动或切换到 headless、隔离 Profile 或云端浏览器，默认搜索 Bing 国际版；公开搜索无需账号或 API key，受限资源由用户在当前 Profile 手动登录后继续读取。
 
-| 情况 | 行为 |
-|---|---|
-| 未安装 uv | 提示安装命令后跳过该段，不中断安装 |
-| uv 里没有 browser-harness | `uv tool install --python 3.12 browser-harness` |
-| 已安装 | `uv tool upgrade browser-harness` 直接升级，**不询问**（与 rg/fd 不同，sync 即升级） |
-| `PI_OFFLINE=1` | 未安装则跳过；已安装则跳过升级，仍用现有版本重新生成 SKILL.md |
-| 升级/生成失败 | 只跳过本段，不影响其它内容 |
+默认上限为 3 次搜索、累计 30 个内容页面、链接深度 3 层；具体计数及安全边界见 [SKILL.md](skills/local-web-search/SKILL.md)。没有可用的本地浏览器能力时会说明限制，不自动转向云端或安装新工具。
 
-首次使用还需一次性手动动作：在 Chrome 打开 `chrome://inspect/#remote-debugging` 勾选允许远程调试，之后 browser-harness 即可连接真实 Chrome Profile。
+覆盖旧版时须移除遗留脚本；统一安装入口的 `--force` 会替换目标技能目录，无需执行已移除的技能内部署脚本。
 
-## 手动构建（不安装）
+### browser-use
 
-如果只想构建而不部署到全局目录：
+browser-use 是本仓库的个人 Chrome 技能，不是同名的 browser-use Python Agent 框架；它依赖的上游工具包和 CLI 仍是 browser-harness。
+
+仅通过 `python '<skill-dir>/scripts/chrome.py'` 连接 Windows 稳定版、有界面的个人 Chrome，不以原生官方 CLI 作为本地连接入口。每任务使用独立 `--session`，复用已授权连接；`--stop` 不关闭用户 Chrome 或其他会话。
+
+`sync` 继续通过 uv 安装/升级官方 browser-harness 包；从 `skill-template.md` + `skill-overrides.json` 生成 `SKILL.md`，原始上游说明保存到 `references/upstream-skill.md`。普通 sync 和 `--tools` 都整体刷新说明及 `scripts/`、`references/`，不要求 `--force`；模板和 overrides 不部署。当前适配仅验证 `0.1.13`，未知版本会提示且入口拒绝调用，须维护者验证并更新适配器，不能绕过检查。
+
+技能身份、目录及生成/部署入口统一使用 `browser-use`；`browser-harness` 专指底层依赖。`%LOCALAPPDATA%/custom-skills/browser-harness` 保存该依赖 daemon 的 session 状态，不是技能安装目录；保持路径稳定以便识别和清理已有连接。
+
+诊断、授权、PowerShell here-string 示例、清理边界和待实测矩阵见 [browser-use README](skills/browser-use/README.md)。
+
+## 本地验证（不安装）
+
+local-web-search 无需构建，在仓库根运行静态契约测试：
 
 ```shell
-cd skills/local-web-search
-npm install --ignore-scripts
-npm run build
-npm test
+python -m unittest discover -s tests -p 'test_local_web_search.py'
 ```
+
+浏览器诊断、联网与登录交接的验证方式见 [技能 README](skills/local-web-search/README.md#验证)；测试不会部署到全局目录。
 
 ## 添加新技能
 

@@ -1,0 +1,4 @@
+{
+  "name": "browser-use",
+  "description": "通过 Chrome 专用入口复用 browser-harness CLI，以 CDP 操作 Windows 本机有界面个人 Chrome Profile 和登录态，不受 Edge 等其他浏览器开关状态影响。当需要网页交互、JS 渲染、登录态读取，或上层任务明确要求通过本地浏览器搜索和阅读时使用。本技能只提供浏览器操作，不负责组织检索流程，不管理 Chrome 以外的浏览器；明确要求本地浏览器时，不改用 HTTP 抓取或云端浏览器。"
+}

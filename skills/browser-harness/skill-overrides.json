@@ -1,4 +1,0 @@
-{
-  "name": "browser-harness",
-  "description": "通过 browser-harness CLI 以 CDP 直接控制本机真实 Chrome（使用用户已登录的 Profile）。当需要操作或验证网页、自动化页面交互、抓取需登录或 JS 渲染的内容时使用。不适用于简单的网络搜索或公开文章阅读（请改用 local-web-search），也不管理 Chrome 以外的浏览器。"
-}

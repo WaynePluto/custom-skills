@@ -1,69 +1,52 @@
 # local-web-search
 
-面向 Pi 的本地浏览器网络搜索 Skill。主 Agent 自动判断是否需要联网，并通过独立 `pi --print` 子进程完成"搜索、阅读、核实、总结"。
+用本地浏览器提供类似在线 AI Chat 的网页搜索：打开搜索引擎、阅读必要页面、返回答案和来源链接。不要求搜索服务账号或 API key，不绑定特定 Agent 或浏览器技能。
 
-## 特点
+## 前提与默认行为
 
-- 无 MCP Server、无常驻服务
-- Chrome 自动发现，Edge 自动降级
-- 可选显式浏览器路径，但不要求环境变量
-- 独立临时 Profile，不读取个人 Cookie
-- 子 Agent 隔离网页正文，减少主会话上下文污染
-- Bing 搜索、Readability 正文提取、Markdown 转换
+当前 Agent 必须已有获用户授权的本地有界面浏览器操作能力，能够使用个人 Chrome Profile 导航、读取页面并在需要时交给用户手动登录。本技能只提供工作流，没有独立浏览器启动器、运行时依赖或安装命令。
 
-## 安装依赖
+- 默认使用用户已授权的本机有界面个人 Chrome Profile；不主动启动或切换到 headless、隔离 Profile 或云端浏览器。后台标签页仍属于有界面 Chrome。
+- Chrome 不可用时，可降级到现有能力支持且用户已授权的其他本机有界面浏览器（如 Edge），不自动下载安装或转向云服务。
+- 默认通过浏览器搜索 Bing 国际版，不需要预先登录；国际版不可用时说明情况，不静默切换其他引擎。
+- 内容需要登录时，请用户在当前个人 Chrome Profile 完成登录，然后沿用同一会话继续读取。不复制 Cookie，不索取密码或验证码。
+- 找到足够信息就回答，并附关键事实的来源链接；30 个内容页是上限，不是目标，1 页足以回答就只读 1 页。并非批量爬虫或网站业务自动化工具。
 
-仓库根目录为 pnpm workspace，在仓库根或技能目录执行：
+## 默认预算
 
-```shell
-pnpm install --ignore-scripts
-```
+| 项目 | 上限 |
+|---|---|
+| 搜索请求 | 全任务最多 3 次，查询、翻页、重试及失败均计入 |
+| 内容页面 | 全任务最多 30 个去重页面，失败访问也计入，不是每层 30 个 |
+| 链接深度 | 最多 3 层；搜索结果为第 0 层，结果页面为第 1 层 |
 
-## 部署到全局 Skills 目录
+搜索结果页不占内容页额度。直接提供的 URL 或已确认的官方入口从第 1 层开始。滚动、补读、登录后恢复不重复计数，也不重置预算；用户明确要求时可以调整上限。完整计数、安全与资源规则见 [SKILL.md](SKILL.md)。
 
-```shell
-python scripts/deploy.py
-# 或指定目标路径：
-python scripts/deploy.py --destination /path/to/target/local-web-search
-```
+## GitHub 检索
 
-部署内容为 SKILL.md + scripts/ + package.json，依赖通过 `pnpm install --prod` 从 pnpm store 硬链接，几乎不占额外磁盘。
+查找或比较开源库时，默认仍由浏览器使用 GitHub 站内搜索，结果不足再用 Bing 国际版的 `site:github.com` 补充。公开仓库不要求登录；受限内容按个人 Chrome Profile 的手动登录流程继续。
 
-`playwright-core` 不会下载额外浏览器，直接使用本机 Chrome 或 Edge。
+已有且已获用户授权的 GitHub CLI（`gh`）可作为只读结构化筛选工具，但不是技能依赖：不自动安装，不把浏览器登录态当作 CLI 凭据，也不为便利性强制用户另行认证。候选仓库应按需核对 README、License、归档状态、更新/release、Issue/PR 维护情况和运行时要求，不能只看 Stars。搜索列表按第 0 层和 1 次搜索计数；实际打开仓库详情后才占内容页，完整策略见 [SKILL.md](SKILL.md#github-专项检索)。
 
-## 浏览器诊断
+## 从旧版迁移
 
-```shell
-npm run browser:check
-```
+旧的子 Agent 启动器、浏览器采集与部署脚本、Node 包和依赖已经移除，不再维护第二套浏览器驱动。安装仍由仓库统一安装入口或用户所用 Agent 的技能安装方式负责；覆盖旧版本时应移除旧目录中的遗留脚本，而不是仅替换 `SKILL.md`。
 
-（脚本命令用 npm/pnpm 运行均可。）
+此版本要求宿主能够操作用户已授权的本机有界面浏览器并支持个人会话交接；能力缺失时会明确报告，不自动安装工具或借用云端浏览器。
 
-## 最小搜索测试
+## 验证
+
+在仓库根目录运行该技能的静态契约测试，无需安装运行时依赖：
 
 ```shell
-node scripts/search-bing.mjs --query "Microsoft official site" --max-results 3
+python -m unittest discover -s tests -p 'test_local_web_search.py'
 ```
 
-## 完整采集测试
+静态测试检查文档规则、职责边界和部署结果，不能证明模型实际遵守预算。使用当前可用的本地浏览器能力做最小人工冒烟：
 
-```shell
-node scripts/research.mjs --query "Node.js latest LTS official" --max-results 5 --read 2
-```
+1. 运行其连接诊断，确认操作的是用户已授权的本机有界面个人 Chrome Profile。
+2. 在本任务新建的标签页搜索 Bing 国际版，确认实际结果页，筛选一个公开的官方来源。
+3. 打开该来源，提取简短正文及实际 URL；结束后仅关闭本任务创建的标签页，不操作用户原有标签页。
+4. 只有用户明确配合时才验证登录交接：由用户自行登录后恢复同一页面，检查预算未重置、登录态保留。
 
-## 启动搜索子 Agent
-
-```shell
-python scripts/run-search-subagent.py --query "Node.js 当前最新 LTS 版本是什么？请引用官方来源"
-```
-
-## 浏览器选择
-
-默认顺序：
-
-1. 可选命令行参数 `--browser-path`
-2. Playwright `chrome` channel
-3. Playwright `msedge` channel
-4. Windows 注册表和常见安装目录
-
-可使用 `--browser chrome` 或 `--browser edge` 调整优先顺序，但仍会在首选浏览器不可用时降级。技能不读取任何浏览器路径或浏览器偏好环境变量。
+网络、权限或登录交接无法验证时，应如实记录，不能用静态测试通过代替浏览器实测。

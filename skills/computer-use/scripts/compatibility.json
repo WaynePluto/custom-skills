@@ -1,0 +1,37 @@
+{
+  "schema_version": 2,
+  "backend": {
+    "distribution": "cua-driver",
+    "version": "0.28.2",
+    "upstream_repository": "https://github.com/trycua/cua",
+    "audited_tag": "cua-driver-rs-v0.28.2",
+    "audited_commit": "fc188250b4ca8549b8e61f937fdb1fb560770e86",
+    "runtime": "in_process_sdk",
+    "runtime_commit_verification": "not_claimed_binary_reproducible_build",
+    "runtime_guards": ["exact_distribution_version", "package_code_and_native_sha256", "python_major_minor", "platform_architecture", "typed_interface_signature"]
+  },
+  "python": {"host_entry_min": "3.10", "runtime": "3.13", "implementation": "CPython"},
+  "platform": {"os": "Windows 11", "architecture": "x86_64"},
+  "packages": [
+    {
+      "distribution": "cua-driver", "module": "cua_driver", "version": "0.28.2",
+      "artifact": "cua_driver-0.28.2-py3-none-win_amd64.whl",
+      "wheel_sha256": "b987cfb1ac3eb7c682650f8cdfd3698ca3d31adeb0b0cf419829025ca4aa2be8",
+      "file_count": 9,
+      "code_tree_sha256": "05e7470bafd53e0474355f276f9a8f4fe0886381c955c7c7e8754d2b29104b9f"
+    },
+    {
+      "distribution": "comtypes", "module": "comtypes", "version": "1.4.17",
+      "purpose": "read_only_password_and_control_identity_guard",
+      "artifact": "comtypes-1.4.17-py3-none-any.whl",
+      "wheel_sha256": "4e0a221dde2c589b82977bed802efd71cd5eb67a380347b732e02735e597f586",
+      "file_count": 141,
+      "code_tree_sha256": "e024b5f45488d8246db9478a7c09c1e6bdf5529b6dce10fd15afd3641f622b6c"
+    }
+  ],
+  "interfaces": {
+    "CuaDriver": ["create", "get_window_state", "list_windows", "click", "call_tool", "shutdown"],
+    "ClickInput": ["target", "position", "delivery_mode", "session", "button", "count"],
+    "GetWindowStateInput": ["pid", "window_id", "include_accessibility_tree", "include_screenshot", "max_elements", "max_depth", "max_dimension"]
+  }
+}
