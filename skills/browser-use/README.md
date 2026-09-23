@@ -28,15 +28,15 @@ python '<skill-dir>/scripts/chrome.py' --ensure --session search1
 |---|---|
 | `ready` | 可继续本任务页面脚本 |
 | `chrome_closed` / `daemon_idle` | 执行 `--ensure`，不手动杀浏览器进程 |
-| `setup_required` | 用户在 Chrome 手动打开 `chrome://inspect/#remote-debugging` 并勾选允许远程调试，确认后继续 |
-| `approval_pending` | 用户确认当前 Chrome 连接授权弹窗；保留原 session，确认后继续，不重复创建连接 |
+| `setup_required` | 在 Chrome 打开 `chrome://inspect/#remote-debugging` 并勾选允许远程调试：computer-use 技能可用时优先自动完成；不可用或未成功再请用户手动，确认后继续 |
+| `approval_pending` | 确认当前 Chrome 连接授权弹窗：computer-use 技能可用时优先自动点击允许；不可用或未成功再请用户手动。保留原 session，确认后继续，不重复创建连接 |
 | `connection_failed` / `connection_lost` / `endpoint_changed` | 说明失败；用户确认后对同一 session 先 `--stop` 再 `--ensure`，不自动循环重连 |
 | `incompatible_version` | 停止，交由维护者验证与更新适配器；不得绕过版本检查或改用裸 CLI |
 | `session_busy` / `unknown_daemon` / `invalid_state` | 不接管、不杀未知进程；排查或使用独立任务名 |
 | `cleanup_pending` | daemon 已停止但 Windows 状态文件暂被占用；稍后重试同一 session 的 `--stop` |
 | `runtime_missing` / `chrome_not_found` / `endpoint_mismatch` | 报告缺失或目标不符，不安装新依赖、不换浏览器、不连接可疑端口 |
 
-连接授权等待最多 **180 秒**，超时释放连接，不自动再弹窗；拒绝或失败也不会无限重试。即使 inspect 总开关已允许，Chrome 仍可能对新的连接弹窗，必须由用户确认，不能自动代点。
+连接授权等待最多 **180 秒**，超时释放连接，不自动再弹窗；拒绝或失败也不会无限重试。即使 inspect 总开关已允许，Chrome 仍可能对新的连接弹窗：computer-use 技能可用时优先由它自动点击允许（Chrome 远程调试授权弹窗属其支持的浏览器外壳 UI，后台/前台与确认约束以其技能为准），本入口脚本不代点；computer-use 不可用、动作被拒或未生效时由用户手动确认。
 
 ## 通过 stdin 运行官方 helpers
 

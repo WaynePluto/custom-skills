@@ -25,14 +25,14 @@ python '<skill-dir>/scripts/chrome.py' --ensure --session search1
 |---|---|
 | `ready` | 连接可用，继续页面任务 |
 | `chrome_closed` / `daemon_idle` | 诊断状态，运行 `--ensure` |
-| `setup_required` | 请用户在 Chrome 打开 `chrome://inspect/#remote-debugging` 并允许远程调试；确认后继续 |
-| `approval_pending` | 请用户允许 Chrome 当前的连接授权弹窗；暂停，不轮询、不重开连接。用户确认后用同一 session 继续 |
+| `setup_required` | 在 Chrome 打开 `chrome://inspect/#remote-debugging` 并允许远程调试：computer-use 技能可用时优先由它自动完成，再复核状态；不可用或未成功则请用户手动，确认后继续 |
+| `approval_pending` | 允许 Chrome 当前的连接授权弹窗：computer-use 技能可用时优先由它自动点击允许，再复核状态；不可用或未成功则请用户手动。保留同一 session，不轮询、不重开连接，确认后继续 |
 | `connection_failed` / `connection_lost` / `endpoint_changed` | 说明失败；用户确认后先对同一 session 执行 `--stop`，再 `--ensure`，不自动循环 |
 | `incompatible_version` | 升级后的上游版本尚未验证，停止；不要绕过版本检查或改用裸 CLI |
 | `session_busy` / `unknown_daemon` / `invalid_state` | 不接管、不杀未知进程；说明状态并选择独立 session 或排查 |
 | `cleanup_pending` | Windows 状态文件暂被占用；稍后重试同一 session 的 `--stop` |
 
-授权连接最多保留 180 秒，随后自行释放。被拒绝、超时或启动失败后不会自动创建新弹窗。已经允许总开关的 Chrome 仍可能要求每次连接授权，这不是可以绕过的错误。
+授权优先自动化：inspect 开关和连接授权弹窗在 computer-use 技能可用时，优先由它按自身单步工作流代为允许（Chrome 远程调试授权弹窗属其支持的浏览器外壳 UI，后台/前台与确认约束以其技能为准）；本入口脚本自身仍不代点、不修改授权设置。computer-use 不可用、动作被拒或未生效时，回到请用户手动确认，不换其他方式绕过。授权连接最多保留 180 秒，随后自行释放。被拒绝、超时或启动失败后不会自动创建新弹窗。已经允许总开关的 Chrome 仍可能要求每次连接授权，这不是可以绕过的错误。
 
 ## 页面操作
 
