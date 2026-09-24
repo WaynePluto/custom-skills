@@ -1,6 +1,6 @@
-# computer-use：基于 cua-driver 的 Windows 桌面 CLI
+# computer-use 维护说明：架构、安装与验证
 
-Agent 入口见 [SKILL.md](SKILL.md)，完整命令见 [workflow.md](references/workflow.md)，限制见 [safety.md](references/safety.md)，源码依据见 [upstream.md](references/upstream.md)。
+面向维护者的实现资料；Agent 操作工作流以 [SKILL.md](../SKILL.md)、[workflow.md](workflow.md) 和 [safety.md](safety.md) 为准，上游限制见 [upstream.md](upstream.md)。
 
 ## 架构
 

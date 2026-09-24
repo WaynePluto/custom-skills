@@ -182,7 +182,7 @@ class BrowserUseFixture(unittest.TestCase):
         (self.source / "scripts" / "chrome_runtime.py").write_text("new runtime\n", encoding="utf-8")
         (self.source / "references").mkdir()
         (self.source / "references" / "local-entry.md").write_text("本地参考\n", encoding="utf-8")
-        (self.source / "README.md").write_text("# 本机 Chrome 入口\n", encoding="utf-8")
+        (self.source / "NOTES.md").write_text("# 本机 Chrome 入口\n", encoding="utf-8")
         self.output = self.enterContext(mock.patch("sys.stdout", new_callable=io.StringIO))
         self.command = self.enterContext(mock.patch.object(
             install.subprocess, "run", side_effect=AssertionError("Unexpected subprocess")
@@ -304,7 +304,7 @@ class DeployBrowserUseToolsTest(BrowserUseFixture):
             self.assertFalse((self.destination / relative).exists())
         for relative in (
             "scripts/compatibility.json", "scripts/chrome_runtime.py", "references/local-entry.md",
-            "README.md",
+            "NOTES.md",
         ):
             self.assertEqual(
                 (self.destination / relative).read_bytes(), (self.source / relative).read_bytes()
@@ -530,14 +530,15 @@ class DeployBrowserUseFilesTest(BrowserUseFixture):
         self.real_copy = self.root / "real-skill-copy"
         shutil.copytree(REAL_BROWSER_USE_SKILL, self.real_copy)
 
-    def test_real_skill_preserves_scripts_compatibility_references_and_readme(self):
+    def test_real_skill_preserves_scripts_compatibility_and_references(self):
         install.deploy_generic(self.real_copy, self.destination, force=True)
         self.assert_only_browser_use_deployed()
         for relative in (
-            "SKILL.md", "README.md", "scripts/chrome.py", "scripts/chrome_host.py",
+            "SKILL.md", "scripts/chrome.py", "scripts/chrome_host.py",
             "scripts/chrome_runtime.py", "scripts/chrome_session.py", "scripts/compatibility.json",
             "references/upstream-skill.md",
             "references/page-workflow.md",
+            "references/maintenance.md",
         ):
             with self.subTest(file=relative):
                 self.assertTrue((self.real_copy / relative).is_file(), relative)

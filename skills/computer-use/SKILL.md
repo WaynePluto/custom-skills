@@ -6,7 +6,7 @@ description: "通过 cua-driver 本地 CLI 观察并单步操作 Windows 原生�
 
 通过 `scripts/computer.py` 直接使用锁定版本的 `cua-driver` Python SDK。每次调用只有一个受监督 worker，SDK 在进程内创建并 shutdown；不启动 MCP Server、HTTP 服务或常驻 daemon，不依赖其它 Agent 框架。
 
-首次使用前读取 [命令与恢复工作流](references/workflow.md) 和 [安全边界](references/safety.md)。版本与上游限制见 [上游基线](references/upstream.md)。
+首次使用前读取 [命令与恢复工作流](references/workflow.md) 和 [安全边界](references/safety.md)。版本与上游限制见 [上游基线](references/upstream.md)，架构、安装与验证见 [维护说明](references/maintenance.md)。
 
 ## 何时使用
 

@@ -97,9 +97,9 @@ pnpm test             # 跑全部静态测试（Node + Python）
 
 | 技能 | 作用域 | 说明 |
 |---|---|---|
-| [browser-use](skills/browser-use/README.md) | 全局 | 个人 Chrome 技能，依赖 browser-harness 并复用其 CDP/helpers，连接 Windows 稳定版个人 Chrome；`sync` 生成说明并刷新适配脚本 |
-| [computer-use](skills/computer-use/README.md) | 全局 | Windows 原生 GUI 单步操作技能；直接使用 cua-driver 同进程 SDK，默认后台限定，不启动 MCP Server 或常驻 daemon，保留快照重验证、请求去重和有界 JSON |
-| [local-web-search](skills/local-web-search/) | 全局 | 通用本地浏览器搜索工作流；默认使用有界面个人 Chrome Profile、Bing 国际版优先，支持用户手动登录后继续，无独立运行时依赖 |
+| [browser-use](skills/browser-use/SKILL.md) | 全局 | 个人 Chrome 技能，依赖 browser-harness 并复用其 CDP/helpers，连接 Windows 稳定版个人 Chrome；`sync` 生成说明并刷新适配脚本 |
+| [computer-use](skills/computer-use/SKILL.md) | 全局 | Windows 原生 GUI 单步操作技能；直接使用 cua-driver 同进程 SDK，默认后台限定，不启动 MCP Server 或常驻 daemon，保留快照重验证、请求去重和有界 JSON |
+| [local-web-search](skills/local-web-search/SKILL.md) | 全局 | 通用本地浏览器搜索工作流；默认使用有界面个人 Chrome Profile、Bing 国际版优先，支持用户手动登录后继续，无独立运行时依赖 |
 | [pixel2ase](project-skills/pixel2ase/) | 项目级 | 将 AI 生成的像素风图片转换为原生分辨率 PNG 和 indexed `.aseprite` 工程 |
 
 ## 扩展列表
@@ -186,7 +186,7 @@ custom-skills/
 │   ├── browser-use/           # 个人 Chrome 技能，依赖 browser-harness
 │   └── <skill-name>/
 │       ├── SKILL.md           # 技能定义（Agent 读取）
-│       ├── README.md          # 人类可读说明
+│       ├── references/        # 详细资料（工作流、维护说明、上游基线）
 │       ├── package.json       # 依赖声明（如需要）
 │       ├── scripts/           # 可执行脚本
 │       │   ├── build.mjs      # 构建打包（如有）
@@ -287,7 +287,7 @@ browser-use 是本仓库的个人 Chrome 技能，不是同名的 browser-use Py
 
 技能身份、目录及生成/部署入口统一使用 `browser-use`；`browser-harness` 专指底层依赖。`%LOCALAPPDATA%/custom-skills/browser-harness` 保存该依赖 daemon 的 session 状态，不是技能安装目录；保持路径稳定以便识别和清理已有连接。
 
-诊断、授权、PowerShell here-string 示例、清理边界和待实测矩阵见 [browser-use README](skills/browser-use/README.md)。
+诊断、授权、PowerShell here-string 示例和清理边界见 [SKILL.md](skills/browser-use/SKILL.md)；适配、同步与真实状态矩阵见 [维护说明](skills/browser-use/references/maintenance.md)。
 
 ## 本地验证（不安装）
 
@@ -297,7 +297,7 @@ local-web-search 无需构建，在仓库根运行静态契约测试：
 python -m unittest discover -s tests -p 'test_local_web_search.py'
 ```
 
-浏览器诊断、联网与登录交接的验证方式见 [技能 README](skills/local-web-search/README.md#验证)；测试不会部署到全局目录。
+浏览器诊断、联网与登录交接的验证方式见 [维护说明](skills/local-web-search/references/maintenance.md)；测试不会部署到全局目录。
 
 ## 添加新技能
 

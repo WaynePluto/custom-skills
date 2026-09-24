@@ -27,7 +27,7 @@ class BrowserUseSkillTests(unittest.TestCase):
     def setUpClass(cls):
         cls.template = (SKILL_DIR / "skill-template.md").read_text(encoding="utf-8")
         cls.skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-        cls.readme = (SKILL_DIR / "README.md").read_text(encoding="utf-8")
+        cls.maintenance = (SKILL_DIR / "references/maintenance.md").read_text(encoding="utf-8")
         cls.workflow = (SKILL_DIR / "references/page-workflow.md").read_text(encoding="utf-8")
         cls.overrides = json.loads((SKILL_DIR / "skill-overrides.json").read_text(encoding="utf-8"))
 
@@ -41,9 +41,8 @@ class BrowserUseSkillTests(unittest.TestCase):
         self.assertLessEqual(len(self.overrides["description"]), 1024)
 
     def test_dependency_and_skill_identity_are_distinct(self):
-        for text in (self.skill, self.readme):
-            self.assertIn("不是同名的 browser-use Python Agent 框架", text)
-            self.assertIn("browser-harness", text)
+        self.assertIn("不是同名的 browser-use Python Agent 框架", self.skill)
+        self.assertIn("browser-harness", self.skill)
         upstream = (SKILL_DIR / "references/upstream-skill.md").read_text(encoding="utf-8")
         self.assertRegex(upstream, r"(?m)^name: browser-harness$")
         self.assertNotIn("本地页面操作与恢复规则", upstream)
@@ -72,8 +71,8 @@ class BrowserUseSkillTests(unittest.TestCase):
             self.assertTrue((ROOT / "tests" / name).is_file(), name)
 
     def test_local_document_links_resolve_and_documents_are_bounded(self):
-        paths = [SKILL_DIR / name for name in ("SKILL.md", "skill-template.md", "README.md",
-                                               "references/page-workflow.md")]
+        paths = [SKILL_DIR / name for name in ("SKILL.md", "skill-template.md",
+                                               "references/maintenance.md", "references/page-workflow.md")]
         for path in paths:
             text = path.read_text(encoding="utf-8")
             self.assertLessEqual(len(text.splitlines()), 600, str(path))
@@ -121,11 +120,11 @@ class BrowserUseSkillTests(unittest.TestCase):
                        "保留仍在等待用户登录", "不关闭 Chrome、其他浏览器或其他 session"):
             self.assertIn(clause, self.skill)
         self.assertIn("暂缓 stop", self.workflow)
-        self.assertIn("这是依赖运行目录，不是技能安装目录", self.readme)
-        self.assertIn("保持稳定以便识别和清理已有 session", self.readme)
+        self.assertIn("这是依赖运行目录，不是技能安装目录", self.maintenance)
+        self.assertIn("保持稳定以便识别和清理已有 session", self.maintenance)
 
     def test_session_tab_identity_and_first_navigation_contract(self):
-        for text in (self.template, self.readme, self.workflow):
+        for text in (self.template, self.workflow):
             for clause in ("session_tab()", "dedicated_target_id", "Target.getTargetInfo",
                            "{targetId: str, url: str, title: str}", "type=page", "current_tab()",
                            "不创建、不切换、不导航", "不按 URL 或列表猜归属", "并行/第二页",
@@ -135,29 +134,29 @@ class BrowserUseSkillTests(unittest.TestCase):
                     self.assertIn(clause, text)
 
     def test_dedicated_tab_cleanup_handoff_and_blank_boundaries(self):
-        for text in (self.template, self.readme, self.workflow):
+        for text in (self.template, self.workflow):
             for clause in ("短暂创建一个 `about:blank`", "多余长期空白页", "硬隔离",
                            "默认 page 命令", "自动恢复一个新空白页", "不克隆", "暂缓"):
                 with self.subTest(clause=clause):
                     self.assertIn(clause, text)
-        for text in (self.template, self.readme, self.workflow):
+        for text in (self.template, self.workflow):
             for clause in ("固定到发出时的 CDP session", "stale-session", "并重放", "Target.*",
                            "显式 session", "原子"):
                 with self.subTest(clause=clause):
                     self.assertIn(clause, text)
         self.assertIn("额外标签调用 `close_tab(target_id)`", self.workflow)
         self.assertIn("专用页由 `--stop` 清理", self.template)
-        self.assertIn("不反复运行首导航示例", self.readme)
+        self.assertIn("不反复运行首导航示例", self.template)
 
-    def test_readme_documents_local_injection_and_historical_validation(self):
+    def test_maintenance_documents_local_injection_and_historical_validation(self):
         for clause in ("scripts/chrome_session.py", "scripts/chrome_runtime.py", "globals",
                        "PID、创建时间、generation、binding 和 token", "不替换官方页面 helpers",
                        "不修改第三方 `site-packages`", "0.1.13", "历史验证（技能改名时",
                        "不以 mock 测试代替真实矩阵"):
-            self.assertIn(clause, self.readme)
+            self.assertIn(clause, self.maintenance)
 
     def test_all_powershell_python_examples_are_syntactically_valid(self):
-        for filename, text in (("skill-template.md", self.template), ("README.md", self.readme)):
+        for filename, text in (("skill-template.md", self.template),):
             with self.subTest(filename=filename):
                 [code] = python_examples(text)
                 tree = ast.parse(code)
@@ -188,7 +187,7 @@ class BrowserUseSkillTests(unittest.TestCase):
 class BrowserUseExamplesTests(unittest.TestCase):
     """只注入 mock helpers，核验专用页复用、拒绝覆盖和失败时保留归属。"""
 
-    filenames = ("skill-template.md", "README.md")
+    filenames = ("skill-template.md",)
 
     def run_example(self, filename, *, tab_url="about:blank", switched_target_id="owned-tab",
                     switched_url="about:blank", loaded=True, navigation_error=None,

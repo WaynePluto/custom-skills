@@ -28,7 +28,7 @@ class SearchSkillContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.skill = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
-        cls.readme = (SKILL_DIR / "README.md").read_text(encoding="utf-8")
+        cls.maintenance = (SKILL_DIR / "references" / "maintenance.md").read_text(encoding="utf-8")
 
     def test_frontmatter_has_scope_and_capability_requirements(self):
         match = re.match(r"\A---\n(.*?)\n---\n", self.skill, re.S)
@@ -48,7 +48,7 @@ class SearchSkillContractTest(unittest.TestCase):
             r"run-search-subagent|search-bing\.mjs|read-page\.mjs|research\.mjs",
             r"scripts/deploy\.py|pnpm install|npm install",
         )
-        for text in (self.skill, self.readme):
+        for text in (self.skill, self.maintenance):
             for pattern in forbidden:
                 with self.subTest(pattern=pattern):
                     self.assertNotRegex(text, re.compile(pattern, re.I))
@@ -58,11 +58,10 @@ class SearchSkillContractTest(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertFalse((SKILL_DIR / name).exists())
         self.assertLessEqual(len(self.skill.splitlines()), 150)
-        self.assertLessEqual(len(self.readme.splitlines()), 150)
+        self.assertLessEqual(len(self.maintenance.splitlines()), 150)
 
     def test_personal_chrome_profile_is_the_default(self):
-        for text in (self.skill, self.readme):
-            self.assertIn("默认使用用户已授权的本机有界面个人 Chrome Profile", text)
+        self.assertIn("默认使用用户已授权的本机有界面个人 Chrome Profile", self.skill)
         for clause in (
             "不主动启动或切换到 headless",
             "后台标签页仍属于用户的有界面 Chrome",
@@ -90,20 +89,17 @@ class SearchSkillContractTest(unittest.TestCase):
     def test_default_budgets_are_task_wide_and_docs_agree(self):
         for label, limit in (("搜索请求", 3), ("内容页面", 30), ("链接深度", 3)):
             pattern = rf"^\| {label} \| [^\n|]*?([0-9]+)"
-            for text in (self.skill, self.readme):
-                with self.subTest(label=label, document=text[:30]):
-                    match = re.search(pattern, text, re.M)
-                    self.assertIsNotNone(match)
-                    self.assertEqual(int(match[1]), limit)
+            match = re.search(pattern, self.skill, re.M)
+            self.assertIsNotNone(match)
+            self.assertEqual(int(match[1]), limit)
         self.assertIn("不是每轮或每层 30 个", self.skill)
         self.assertIn("访问前计入，失败访问也计入", self.skill)
         self.assertIn("搜索结果页不占内容页额度", self.skill)
         self.assertIn("只有用户明确要求时才扩大预算", self.skill)
 
     def test_page_limit_is_a_ceiling_not_a_target(self):
-        for text in (self.skill, self.readme):
-            self.assertIn("30 个内容页是上限，不是目标", text)
-            self.assertIn("1 页足以回答就只读 1 页", text)
+        self.assertIn("30 个内容页是上限，不是目标", self.skill)
+        self.assertIn("1 页足以回答就只读 1 页", self.skill)
 
     def test_depth_and_resumption_cannot_reset_budgets(self):
         for clause in (
@@ -135,8 +131,6 @@ class SearchSkillContractTest(unittest.TestCase):
         ):
             with self.subTest(clause=clause):
                 self.assertIn(clause, self.skill)
-        self.assertIn("GitHub 检索", self.readme)
-        self.assertIn("不自动安装", self.readme)
 
     def test_github_results_follow_shared_search_and_depth_budget(self):
         for clause in (
@@ -189,8 +183,8 @@ class SearchSkillContractTest(unittest.TestCase):
         ):
             with self.subTest(clause=clause):
                 self.assertIn(clause, self.skill)
-        self.assertIn("不能证明模型实际遵守预算", self.readme)
-        self.assertIn("只有用户明确配合时才验证登录交接", self.readme)
+        self.assertIn("不能证明模型实际遵守预算", self.maintenance)
+        self.assertIn("只有用户明确配合时才验证登录交接", self.maintenance)
 
     def test_browser_provider_metadata_allows_explicit_browser_search(self):
         provider = ROOT / "skills" / "browser-use"
@@ -220,9 +214,15 @@ class SearchSkillDeploymentTest(unittest.TestCase):
                         redirect_stdout(io.StringIO()):
                     install.deploy_skills(ROOT / "skills", destination_root, SKILL_DIR.name, force=upgrade)
                 run.assert_not_called()
-                self.assertEqual({item.name for item in destination.iterdir()}, {"SKILL.md", "README.md"})
-                for name in ("SKILL.md", "README.md"):
-                    self.assertEqual((destination / name).read_bytes(), (SKILL_DIR / name).read_bytes())
+                self.assertEqual({item.name for item in destination.iterdir()},
+                                 {"SKILL.md", "references"})
+                self.assertEqual(
+                    (destination / "SKILL.md").read_bytes(), (SKILL_DIR / "SKILL.md").read_bytes()
+                )
+                self.assertEqual(
+                    (destination / "references" / "maintenance.md").read_bytes(),
+                    (SKILL_DIR / "references" / "maintenance.md").read_bytes(),
+                )
 
 
 if __name__ == "__main__":
