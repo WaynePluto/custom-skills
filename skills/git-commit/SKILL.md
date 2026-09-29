@@ -143,6 +143,33 @@ style: 删除调试日志
    git log -1 --pretty=fuller
    ```
 
+## 推送后检查 GitHub Actions CI
+
+当提交会推送到 GitHub（remote 指向 github.com）且仓库配置了 Actions CI（`.github/workflows/` 下存在工作流文件）时，推送本身不算完成，还必须确认 CI 通过：
+
+1. **推送并查询运行状态**：推送后等几秒让 workflow 注册，再用 `gh` CLI 查询：
+
+   ```shell
+   git push
+   gh run list --branch $(git branch --show-current) --limit 3
+   ```
+
+2. **等待运行结束**：对最新一次 run 阻塞等待，失败时命令返回非零退出码：
+
+   ```shell
+   gh run watch <run-id> --exit-status --interval 15
+   ```
+
+3. **CI 报错必须修复**：查看失败日志，修复问题后按本文档规范重新 commit 并推送，再重复第 1～2 步，直到 CI 通过：
+
+   ```shell
+   gh run view <run-id> --log-failed
+   ```
+
+   - 修复产生的 commit 同样遵循上文格式（通常为 `fix:`）。
+   - 失败明显与本次改动无关（平台故障、外部依赖抖动等）时，把日志和结论告诉用户，不要反复盲目重试。
+   - 未安装 `gh` 或无法访问 GitHub 时，提醒用户自行到仓库的 Actions 页面确认结果。
+
 ## 项目特定规范
 
 ### 本项目的 Commit 风格
@@ -178,5 +205,6 @@ git commit -m "refactor: 重构暂停菜单为游戏内弹窗" -m @"
 - ✅ 每次提交前使用 `git status` 确认改动
 - ✅ 大改动前先 `git pull` 确保代码是最新的
 - ✅ 提交后使用 `git log -1` 检查 commit 信息
+- ✅ 推送到 GitHub 且仓库配置了 Actions CI 时，推送后检查 Actions 状态；有报错必须修复后重新提交推送（见"推送后检查 GitHub Actions CI"）
 
 现在请根据你的改动创建合适的 commit，然后执行git commit命令提交你的改动。
