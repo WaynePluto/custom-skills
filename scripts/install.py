@@ -153,6 +153,61 @@ GITHUB_API_TIMEOUT = 10
 DOWNLOAD_TIMEOUT = 120
 USER_AGENT = "pi-coding-agent"
 
+# GitHub 下载代理：优先读进程环境 GITHUB_PROXY（已设置但留空表示强制直连），
+# 未设置时读仓库根目录 .env 里的 GITHUB_PROXY（如 http://127.0.0.1:7897）；都未配置则直连。
+_env_cache: dict[str, str] | None = None
+
+# 首次运行时生成的 .env 模板：只有注释行，由用户自行追加 GITHUB_PROXY 配置
+ENV_TEMPLATE = (
+    "# install.py 从 GitHub 下载工具（rg / fd）时使用的代理地址，进程环境变量优先，留空则直连。\n"
+    "# 可写完整地址（http://127.0.0.1:7897）或省略 scheme（127.0.0.1:7897，自动补 http://）。\n"
+)
+
+
+def load_local_env() -> dict[str, str]:
+    """解析仓库根目录的 .env（KEY=VALUE，# 开头为注释），结果按进程缓存。"""
+    global _env_cache
+    if _env_cache is None:
+        _env_cache = {}
+        env_path = REPO_ROOT / ".env"
+        if env_path.exists():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                _env_cache[key.strip()] = value.strip().strip("'\"")
+    return _env_cache
+
+
+def github_proxy() -> str | None:
+    """返回 GitHub 下载代理地址（无 scheme 时补 http://），未配置返回 None。"""
+    raw = os.environ["GITHUB_PROXY"] if "GITHUB_PROXY" in os.environ else load_local_env().get("GITHUB_PROXY", "")
+    raw = raw.strip()
+    if not raw:
+        return None
+    if "://" not in raw:
+        raw = f"http://{raw}"
+    return raw
+
+
+def ensure_env_template() -> None:
+    """没有 .env 时生成仅含注释的模板，提醒用户可在此配置 GITHUB_PROXY。"""
+    env_path = REPO_ROOT / ".env"
+    if env_path.exists():
+        return
+    env_path.write_text(ENV_TEMPLATE, encoding="utf-8")
+    print(f"已生成 {env_path} 模板：需要代理时在文件中追加 GITHUB_PROXY=地址，默认直连")
+
+
+def _open_github(request: urllib.request.Request, timeout: float):
+    """打开 GitHub 请求；配置了代理时经由本地代理。"""
+    proxy = github_proxy()
+    if not proxy:
+        return urllib.request.urlopen(request, timeout=timeout)
+    handler = urllib.request.ProxyHandler({"http": proxy, "https": proxy})
+    return urllib.request.build_opener(handler).open(request, timeout=timeout)
+
 
 def _fd_asset(version: str, plat: str, machine: str) -> str | None:
     if plat == "darwin":
@@ -250,7 +305,7 @@ def latest_release_version(repo: str) -> str:
         request = urllib.request.Request(
             f"https://github.com/{repo}/releases/latest", headers={"User-Agent": USER_AGENT}
         )
-        with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT) as response:
+        with _open_github(request, timeout=GITHUB_API_TIMEOUT) as response:
             tag = response.url.rstrip("/").rsplit("/", 1)[-1]
         if re.fullmatch(r"v?\d+(?:\.\d+)*", tag):
             return tag.lstrip("v")
@@ -259,7 +314,7 @@ def latest_release_version(repo: str) -> str:
 
     url = f"https://api.github.com/repos/{repo}/releases/latest"
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=GITHUB_API_TIMEOUT) as response:
+    with _open_github(request, timeout=GITHUB_API_TIMEOUT) as response:
         data = json.load(response)
     tag = data.get("tag_name", "")
     if not tag:
@@ -269,7 +324,7 @@ def latest_release_version(repo: str) -> str:
 
 def download_file(url: str, dest: Path) -> None:
     request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=DOWNLOAD_TIMEOUT) as response, dest.open("wb") as out:
+    with _open_github(request, timeout=DOWNLOAD_TIMEOUT) as response, dest.open("wb") as out:
         shutil.copyfileobj(response, out)
 
 
@@ -325,7 +380,9 @@ def download_binary(tool: str, bin_dir: Path) -> Path:
     binary_path = bin_dir / (config["binary"] + suffix)
 
     bin_dir.mkdir(parents=True, exist_ok=True)
-    print(f"  下载 {config['display']} {version} ...")
+    proxy = github_proxy()
+    via = f"（经代理 {proxy}）" if proxy else ""
+    print(f"  下载 {config['display']} {version} {via}...")
 
     try:
         with tempfile.TemporaryDirectory(dir=bin_dir, prefix=f"tmp_{config['binary']}_") as tmp:
@@ -1185,6 +1242,9 @@ def main() -> None:
         help="目标项目根目录（与 --project-skills、--name 一起使用）",
     )
     args = parser.parse_args()
+
+    # 首次运行（含 pnpm sync / sync:force）补齐 .env 模板，作为 GitHub 代理配置入口
+    ensure_env_template()
 
     selected_categories = any((args.skills, args.context, args.extensions,
                                args.binaries, args.tools, args.project_skills))
