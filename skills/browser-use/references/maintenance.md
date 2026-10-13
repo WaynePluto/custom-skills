@@ -16,8 +16,8 @@
 
 | 情况 | `sync` 行为 |
 |---|---|
-| 缺少 uv | 提示后跳过本段，不中断其他部署 |
-| 尚未安装官方包 | `uv tool install --python 3.12 browser-harness`，由 uv 管理 Python 环境 |
+| 缺少 uv | 先尝试官方脚本自动安装（尊重 `PI_OFFLINE` 与 `GITHUB_PROXY`）；仍不可用才提示后跳过本段，不中断其他部署 |
+| 尚未安装官方包 | `uv tool install --python 3.12 browser-harness`，由 uv 管理 Python 环境；失败时若存在缺 `pyvenv.cfg` 的半成品工具环境则清除后重试一次，仍失败才跳过 |
 | 已安装 | `uv tool upgrade browser-harness`，不询问；升级失败尝试用现有版本继续生成 |
 | `PI_OFFLINE=1` | 未安装则跳过；已安装则不升级，仍用现有版本生成并检查兼容性 |
 | 上游说明或模板生成失败 | 跳过本段，不把裸 CLI 工作流部署为本地入口 |

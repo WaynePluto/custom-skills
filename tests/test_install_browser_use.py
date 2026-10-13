@@ -265,6 +265,8 @@ class DeployBrowserUseToolsTest(BrowserUseFixture):
 
     def setUp(self):
         super().setUp()
+        install._uv_checked = False
+        install._uv_resolved = None  # ensure_uv 进程内缓存不跨用例携带
         self.enterContext(mock.patch.object(install, "REPO_ROOT", self.repo))
         self.uv = self.enterContext(mock.patch.object(
             install, "uv_executable", return_value="test-uv"
@@ -393,7 +395,10 @@ class DeployBrowserUseToolsTest(BrowserUseFixture):
     def test_no_uv_skips_without_touching_existing_deployment(self):
         self.seed_existing_deployment()
         self.uv.return_value = None
-        install.deploy_browser_use(self.skills_dir)
+        # 自动安装也失败时才真正跳过；期间不得触确既有部署
+        with mock.patch.object(install, "install_uv", return_value=None) as installer:
+            install.deploy_browser_use(self.skills_dir)
+        installer.assert_called_once()
         self.command.assert_not_called()
         self.run.assert_not_called()
         self.find_harness.assert_not_called()
@@ -402,7 +407,7 @@ class DeployBrowserUseToolsTest(BrowserUseFixture):
         self.assertEqual(
             (self.destination / "scripts" / "chrome.py").read_text(encoding="utf-8"), "old script\n"
         )
-        self.assertIn("未找到 uv", self.output.getvalue())
+        self.assertIn("自动安装未成功", self.output.getvalue())
 
     def test_failed_upgrade_still_generates_from_installed_cli(self):
         self.seed_existing_deployment()

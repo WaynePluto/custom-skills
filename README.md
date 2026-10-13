@@ -6,7 +6,7 @@
 
 - **Python >= 3.10**
 - **Node.js >= 20**（部分技能需要）
-- **uv**（browser-use 与 computer-use 通过它准备隔离运行时；没有时 sync 会跳过对应段）
+- **uv**（browser-use 与 computer-use 通过它准备隔离运行时；缺失时 sync 会先用官方脚本自动安装，失败才跳过对应段）
 - **本机安装的 Chrome**（浏览器能力需要；local-web-search 还要求当前 Agent 能操作用户已授权的有界面个人 Chrome Profile，Chrome 不可用时才按工具能力降级到其他已授权的本机有界面浏览器）
 - **Windows + PowerShell 7（pwsh）**：项目中的脚本、SKILL 命令示例和 context 文件默认面向 Windows 上的 PowerShell 7 编写，Shell 命令使用 pwsh 7 语法；在其他 OS / Shell 下使用时需自行改写相应命令
 

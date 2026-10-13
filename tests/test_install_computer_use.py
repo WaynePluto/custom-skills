@@ -162,6 +162,8 @@ class DeployComputerUseFixture(unittest.TestCase):
         self.uv = self.enterContext(mock.patch.object(
             install, "uv_executable", return_value="test-uv"
         ))
+        install._uv_checked = False
+        install._uv_resolved = None  # ensure_uv 进程内缓存不跨用例携带
         self.runner = self.enterContext(mock.patch.object(install, "run"))
         self.deploy = self.enterContext(mock.patch.object(install, "deploy_computer_use_skill"))
         self.deploy.return_value = None

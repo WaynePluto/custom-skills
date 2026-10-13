@@ -657,6 +657,87 @@ def uv_executable() -> str | None:
     return shutil.which("uv") or shutil.which("uv.exe")
 
 
+# uv 官方独立安装脚本入口（docs.astral.sh/uv），产物从 GitHub Releases 下载；
+# 不走 winget：官方脚本跨平台一致且无交互确认。
+UV_INSTALL_PS1 = "irm https://astral.sh/uv/install.ps1 | iex"
+UV_INSTALL_SH = "curl -LsSf https://astral.sh/uv/install.sh | sh"
+UV_INSTALL_SH_WGET = "wget -qO- https://astral.sh/uv/install.sh | sh"
+UV_INSTALL_TIMEOUT = 300
+
+# ensure_uv 结果进程内缓存：browser-use / computer-use 两段只尝试安装一次
+_uv_checked = False
+_uv_resolved: str | None = None
+
+
+def uv_fallback_locations() -> list[Path]:
+    """安装后当前进程 PATH 不会刷新，按官方脚本新旧默认落点探测 uv。"""
+    suffix = ".exe" if sys.platform == "win32" else ""
+    return [
+        Path.home() / ".local" / "bin" / f"uv{suffix}",  # 现行默认
+        Path.home() / ".cargo" / "bin" / f"uv{suffix}",  # uv 0.5 之前的默认
+    ]
+
+
+def install_uv() -> str | None:
+    """用官方脚本安装 uv，返回可执行文件路径；离线或失败时返回 None。"""
+    if offline_mode():
+        print("  跳过：PI_OFFLINE 已启用，不自动安装 uv。")
+        return None
+
+    if sys.platform == "win32":
+        command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", UV_INSTALL_PS1]
+    elif shutil.which("curl"):
+        command = ["sh", "-c", UV_INSTALL_SH]
+    elif shutil.which("wget"):
+        command = ["sh", "-c", UV_INSTALL_SH_WGET]
+    else:
+        print("  跳过：未找到可用于安装 uv 的 powershell/curl/wget。")
+        return None
+
+    print("  未找到 uv，尝试官方脚本自动安装（下载自 astral.sh / GitHub Releases）...")
+    child_env = dict(os.environ)
+    if sys.platform == "win32":
+        # 不传或 pop 掉 PSModulePath 时，5.1 可能重建出混入 pwsh 7 模块目录的路径，
+        # 导致模块解析到 Core 版无法加载；显式给回 Windows PowerShell 自己的默认值
+        windir = os.environ.get("windir", r"C:\Windows")
+        program_files = os.environ.get("ProgramFiles", r"C:\Program Files")
+        child_env["PSModulePath"] = (
+            rf"{program_files}\WindowsPowerShell\Modules;"
+            rf"{windir}\system32\WindowsPowerShell\v1.0\Modules"
+        )
+    proxy = github_proxy()
+    if proxy:
+        # 安装脚本与产物都指向 GitHub 侧，与 rg/fd 下载一样走 GITHUB_PROXY
+        child_env["HTTP_PROXY"] = proxy
+        child_env["HTTPS_PROXY"] = proxy
+
+    try:
+        result = subprocess.run(command, env=child_env, timeout=UV_INSTALL_TIMEOUT)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        print(f"  跳过：uv 自动安装失败（{exc}）。")
+        return None
+    if result.returncode != 0:
+        print(f"  跳过：uv 自动安装失败（退出码 {result.returncode}）。")
+        return None
+
+    for candidate in uv_fallback_locations():
+        if candidate.exists():
+            print(f"  已安装 uv → {candidate}")
+            return str(candidate)
+    print("  跳过：uv 安装脚本执行成功，但默认位置未出现 uv 可执行文件。")
+    return None
+
+
+def ensure_uv() -> str | None:
+    """返回可用的 uv 路径；缺失时先尝试官方脚本自动安装（结果进程内缓存）。"""
+    global _uv_checked, _uv_resolved
+    if not _uv_checked:
+        _uv_checked = True
+        found = uv_executable()
+        _uv_resolved = found if found else install_uv()
+    return _uv_resolved
+
+
 def browser_harness_bin(uv: str) -> Path | None:
     """定位 uv 安装的 browser-harness 可执行文件。
 
@@ -713,6 +794,38 @@ def generate_browser_use_skill(source: Path, upstream: str) -> Path:
     return skill
 
 
+def uv_tools_dir(uv: str) -> Path | None:
+    """返回 uv 工具环境根目录；查询失败返回 None。"""
+    try:
+        result = subprocess.run([uv, "tool", "dir"], capture_output=True, text=True, timeout=10)
+    except Exception:
+        return None
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    return Path(result.stdout.strip())
+
+
+def repair_uv_tool_env(uv: str, name: str) -> bool:
+    """uv tool install 中断会留下缺 pyvenv.cfg 的半成品环境，重装前清掉；
+
+    只清确认损坏的环境（有解释器但没有 pyvenv.cfg），健康环境一律不动。
+    """
+    suffix = ".exe" if sys.platform == "win32" else ""
+    tools_dir = uv_tools_dir(uv)
+    tool_env = tools_dir / name if tools_dir else None
+    if not tool_env:
+        return False
+    has_interpreter = (
+        (tool_env / "Scripts" / f"python{suffix}").exists()
+        or (tool_env / "bin" / "python").exists()
+    )
+    if not has_interpreter or (tool_env / "pyvenv.cfg").exists():
+        return False
+    print(f"  检测到 {name} 的半成品工具环境（缺 pyvenv.cfg），清除后重试...")
+    shutil.rmtree(tool_env, ignore_errors=True)
+    return True
+
+
 def warn_browser_harness_compatibility(source: Path, harness: Path) -> None:
     """升级保持原语义，但未经验证的版本不得静默接入个人浏览器。"""
     try:
@@ -734,9 +847,9 @@ def deploy_browser_use(skills_dir: Path) -> None:
     """
     print(f"\n{'═' * 4} {BROWSER_USE_SKILL}（依赖 {BROWSER_HARNESS}）{'═' * 4}")
 
-    uv = uv_executable()
+    uv = ensure_uv()
     if not uv:
-        print("  跳过：未找到 uv。请先安装（winget install astral-sh.uv）后重跑。")
+        print("  跳过：uv 不可用（缺失且自动安装未成功）；请手动安装（winget install astral-sh.uv）后重跑。")
         return
 
     try:
@@ -752,6 +865,8 @@ def deploy_browser_use(skills_dir: Path) -> None:
             return
         print(f"  首次安装 {BROWSER_HARNESS}（uv 自管 Python {BROWSER_HARNESS_PYTHON}）...")
         result = run([uv, "tool", "install", "--python", BROWSER_HARNESS_PYTHON, BROWSER_HARNESS])
+        if result.returncode != 0 and repair_uv_tool_env(uv, BROWSER_HARNESS):
+            result = run([uv, "tool", "install", "--python", BROWSER_HARNESS_PYTHON, BROWSER_HARNESS])
         if result.returncode != 0:
             print(f"  跳过：安装失败（退出码 {result.returncode}），不影响其它内容。")
             return
@@ -1013,9 +1128,9 @@ def _deploy_computer_use_locked(skills_dir: Path, source: Path, runtime: Path) -
         deploy_computer_use_skill(source, skill_destination)
         return
 
-    uv = uv_executable()
+    uv = ensure_uv()
     if not uv:
-        print("  跳过：未找到 uv。请先安装（winget install astral-sh.uv）后重跑。")
+        print("  跳过：uv 不可用（缺失且自动安装未成功）；请手动安装（winget install astral-sh.uv）后重跑。")
         return
     staged = Path(tempfile.mkdtemp(prefix=".runtime-next-", dir=str(runtime.parent)))
     try:
