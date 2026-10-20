@@ -4,6 +4,8 @@
 **/coverage/
 *.log
 *.lock
+# computer-use 的依赖哈希锁定必须进 Git：install.py --require-hashes 与测试契约都依赖它
+!skills/computer-use/scripts/requirements.lock
 package-lock.json
 pnpm-lock.yaml
 .vscode

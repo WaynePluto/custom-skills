@@ -101,6 +101,7 @@ pnpm test             # 跑全部静态测试（Node + Python）
 | [computer-use](skills/computer-use/SKILL.md) | 全局 | Windows 原生 GUI 单步操作技能；直接使用 cua-driver 同进程 SDK，默认后台限定，不启动 MCP Server 或常驻 daemon，保留快照重验证、请求去重和有界 JSON |
 | [local-web-search](skills/local-web-search/SKILL.md) | 全局 | 通用本地浏览器搜索工作流；默认使用有界面个人 Chrome Profile、Bing 国际版优先，支持用户手动登录后继续，无独立运行时依赖 |
 | [pixel2ase](project-skills/pixel2ase/) | 项目级 | 将 AI 生成的像素风图片转换为原生分辨率 PNG 和 indexed `.aseprite` 工程 |
+| [update-dependencies](.agents/skills/update-dependencies/SKILL.md) | 仓库自用 | 本仓库依赖升级工作流：检查 browser-harness / cua-driver 上游新版本，同步哈希锁定、兼容列表与文档版本号并验证 |
 
 ## 扩展列表
 

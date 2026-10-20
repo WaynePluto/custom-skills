@@ -16,7 +16,7 @@ from typing import Any
 
 from contracts import ToolError, require
 
-EXPECTED_VERSION = "0.28.2"
+EXPECTED_VERSION = "0.37.0"
 BACKEND_ID = f"cua-driver/{EXPECTED_VERSION}/sdk-v1"
 MANIFEST = Path(__file__).with_name("compatibility.json")
 

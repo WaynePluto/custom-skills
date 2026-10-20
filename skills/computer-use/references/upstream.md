@@ -3,10 +3,10 @@
 ## 固定发布基线
 
 - 仓库：[trycua/cua](https://github.com/trycua/cua)
-- 发布：`cua-driver 0.28.2`，tag `cua-driver-rs-v0.28.2`
-- 源码 commit：`fc188250b4ca8549b8e61f937fdb1fb560770e86`
-- 包：`cua_driver-0.28.2-py3-none-win_amd64.whl`
-- wheel SHA-256：`b987cfb1ac3eb7c682650f8cdfd3698ca3d31adeb0b0cf419829025ca4aa2be8`
+- 发布：`cua-driver 0.37.0`，tag `cua-driver-rs-v0.37.0`
+- 源码 commit：`2d2f99228d4d2508dc6fcc84c176b296e146714a`
+- 包：`cua_driver-0.37.0-py3-none-win_amd64.whl`
+- wheel SHA-256：`7057528bdbf2a28c37a85b2a67d12689ec12c46fb1ffc60fa40155a7cca63a2f`
 - 辅助依赖：`comtypes 1.4.17`，仅补查 UIA 密码属性和控件身份，不实现输入。
 - 对照参考：Hermes Agent `v2026.9.21` 的 `tools/computer_use/cua_backend*.py`。本仓库不导入或复制其实现，不采用其自动修复、daemon、审批绕过或前台升级流程。
 
@@ -37,14 +37,14 @@
 
 ## 不能只信任 background 标志
 
-0.28.2 源码中 MSAA 元素点击在 background 下仍可能调用 `send_click_synthesized_mods`。WPF/GTK 等回退路径还可能使用坐标/触摸注入。因此薄适配层额外限制窗口类、动作形态和目标方式；未审定路径在调用前拒绝。
+0.37.0 源码中 MSAA 路径仍可能走合成输入：`msaa.rs` 把 `action:"expand"` 路由到右缘 SendInput 点击，全仓也仍存在 `send_click_synthesized_mods`。WPF/GTK 等回退路径还可能使用坐标/触摸注入。因此薄适配层额外限制窗口类、动作形态和目标方式；未审定路径在调用前拒绝。
 
 Chromium 单次左键元素动作有独立 PostMessage 分支，不经过一般 UIA/注入回退。但 `post_click_on()` 在目标自行成为前台时会调用 `force_foreground_attached(prev_fg)` 恢复原前台；不能承诺绝对无焦点切换，也不能用前后相同采样证明期间没有切换。此结论来自固定版本源码，不等于 Chrome 授权气泡已通过实测。
 
 ## 观察与引用限制
 
 - UIA 元素 `frame` 是物理屏幕坐标；前台元素滚动/拖拽按固定 SDK 的 DWM 左上角内缩一像素逆变换。该 worker 不采集图片，不存在截图缩放缓存。
-- `get_window_state` 必须显式 `include_screenshot=false` 才是纯 UIA 观察；截图按需独立调用。
+- `get_window_state` 必须显式 `include_screenshot=false` 才是纯 UIA 观察；截图按需独立调用。0.37.0 起 `max_image_dimension` 为必填参数，且截图发布要求非空 session 绑定——适配层按 1920 上限传参，并为每次截图使用一次性随机 session id，不建立跨调用会话。
 - 返回 `elements_complete=false` 不能证明元素消失。
 - 上游 token 受 runtime/快照生命周期约束。本地持久化仅保存事实，动作 worker 重新采样后唯一重定位，并使用新的 token。
 - `WindowElement` 不提供密码状态，因此不输出 value；文本动作前用只读 COM 查询 `CurrentIsPassword`，未知即拒绝。

@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import platform
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -95,10 +96,12 @@ class CuaBackend:
         window = self.current_window(hwnd)
         require(window["status"] != "minimized", "target_changed", "不观察最小化窗口。")
         return self.bridge.run(self.bridge.driver.get_window_state(self.sdk.GetWindowStateInput(
-            pid=window["pid"], window_id=hwnd, session=None, query=None,
+            pid=window["pid"], window_id=hwnd, query=None,
+            # 0.37.0 起截图发布要求非空 session 绑定；用一次性随机 id，不引入跨调用会话。
+            session=str(uuid.uuid4()) if destination is not None else None,
             include_accessibility_tree=destination is None, include_screenshot=destination is not None,
             screenshot_out_file=str(destination) if destination else None,
-            max_elements=limit, max_depth=25, max_dimension=1920,
+            max_elements=limit, max_depth=25, max_dimension=1920, max_image_dimension=1920,
         )))
 
     @staticmethod

@@ -1,0 +1,4 @@
+# Windows x64 / CPython 3.13；仅接受已审计 wheel，不安装 MCP 或 Agent 框架。
+--only-binary=:all:
+cua-driver==0.37.0 --hash=sha256:7057528bdbf2a28c37a85b2a67d12689ec12c46fb1ffc60fa40155a7cca63a2f
+comtypes==1.4.17 --hash=sha256:4e0a221dde2c589b82977bed802efd71cd5eb67a380347b732e02735e597f586

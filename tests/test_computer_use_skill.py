@@ -92,10 +92,10 @@ class ComputerUseSkillTests(unittest.TestCase):
     def test_runtime_dependency_and_source_are_pinned(self):
         lock = (SKILL_DIR / "scripts" / "requirements.lock").read_text(encoding="utf-8")
         compatibility = (SKILL_DIR / "scripts" / "compatibility.json").read_text(encoding="utf-8")
-        self.assertIn("cua-driver==0.28.2", lock)
+        self.assertIn("cua-driver==0.37.0", lock)
         self.assertIn("--hash=sha256:", lock)
         self.assertNotIn("cua-driver>=", lock)
-        self.assertIn("fc188250b4ca8549b8e61f937fdb1fb560770e86", compatibility)
+        self.assertIn("2d2f99228d4d2508dc6fcc84c176b296e146714a", compatibility)
         self.assertIn("package_code_and_native_sha256", compatibility)
 
     def test_background_boundary_is_explicit(self):

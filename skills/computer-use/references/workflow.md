@@ -25,7 +25,7 @@
 
 `wait` 元素条件使用精确 `--name`，可附 `--control-type`。文本条件附 `--text`，会先只读检查该编辑控件不是密码字段；匹配值不回显。`--wait-seconds` 默认 10，必须给整体 timeout 留足余量。
 
-SDK 0.28.2 的 Windows UIA 树不能证明完整遍历，通常 `tree_complete=false`。因此 `disappears` 不能把“没看到”当成“已消失”，可能一直返回 `verification_failed`。
+SDK 0.37.0 的 Windows UIA 树不能证明完整遍历，通常 `tree_complete=false`。因此 `disappears` 不能把“没看到”当成“已消失”，可能一直返回 `verification_failed`。
 
 `--display` 为兼容旧 CLI 仍可解析，但返回 `unsupported_action`，不转成主显示器截图。目标最小化时不恢复。
 

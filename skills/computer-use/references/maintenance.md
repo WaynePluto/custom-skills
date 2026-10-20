@@ -8,7 +8,7 @@
 Agent → computer.py（CLI、stdin、有界 JSON、Job Object 监督）
       → runtime.py + state.py + guard.py（锁、一次性快照、去重、验证）
       → backend.py + driver_bridge.py（cua-driver SDK 薄适配）
-      → cua-driver 0.28.2 同进程 Rust runtime
+      → cua-driver 0.37.0 同进程 Rust runtime
       → 当前 Windows 交互桌面
 ```
 
@@ -21,7 +21,7 @@ Agent → computer.py（CLI、stdin、有界 JSON、Job Object 监督）
 
 ## 独立运行时与安装
 
-Windows 11 x64，PowerShell 7，uv 管理的独立 CPython 3.13 venv。依赖仅 `cua-driver==0.28.2`、只读 UIA 防护用 `comtypes==1.4.17`，都锁定 wheel SHA-256。SDK wheel 附带 DLL 和 CLI，但本技能不执行后者。
+Windows 11 x64，PowerShell 7，uv 管理的独立 CPython 3.13 venv。依赖仅 `cua-driver==0.37.0`、只读 UIA 防护用 `comtypes==1.4.17`，都锁定 wheel SHA-256。SDK wheel 附带 DLL 和 CLI，但本技能不执行后者。
 
 ```powershell
 python scripts/install.py --tools --name computer-use

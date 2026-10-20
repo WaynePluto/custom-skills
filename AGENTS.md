@@ -6,6 +6,7 @@
 
 - 默认安装到全局目录的技能放在 `skills/<skill-name>/`。
 - 可分发到任意目标项目的项目级技能放在 `project-skills/<skill-name>/`；安装时必须同时指定目标项目和技能名，不支持批量安装全部项目级技能。
+- 仅服务本仓库维护工作流的自用技能放在 `.agents/skills/<skill-name>/`，随仓库进 Git、由本仓库内的 Agent 直接读取；不进入 `skills/` 的全局安装流程，也不用 `--project-skills` 分发。
 - 每个技能必须包含符合 Agent Skills 规范的 `SKILL.md`。
 - 技能附带的可执行逻辑放在该技能自己的 `scripts/` 中，详细资料放在 `references/` 中，维护者说明统一放 `references/maintenance.md` 并由 `SKILL.md` 链接；技能目录不维护 README，面向人的总览只保留仓库根 README。
 - 面向模型和维护者的说明优先使用中文，命令、API、字段名和错误信息保持原文。
