@@ -22,7 +22,7 @@ python scripts/install.py
 
 脚本会自动完成：
 - 全局技能：依赖下载 → 构建打包 → 部署到 `~/.agents/skills/`
-- Context：将 `context/` 下的 `APPEND_SYSTEM.md` 部署到 `~/.pi/agent/`
+- Context：将 `context/` 下的 `APPEND_SYSTEM.md` 部署到 `~/.pi/agent/`；`DSH_AGENTS.md` 部署为 `~/.dsh/AGENTS.md`（DSH 全局提示词）
 - 二进制：确保 `grep`、`find` 依赖的 `rg`、`fd` 存在于 `~/.pi/agent/bin/`
 - 扩展：将 `extensions/` 下的 Pi 扩展部署到 `~/.pi/agent/extensions/`
 - browser-use：通过 uv 安装/升级官方 browser-harness 包，同步 Chrome 专用 SKILL.md、适配脚本和上游参考说明（普通 sync 也刷新，无需 --force）
@@ -55,7 +55,7 @@ python scripts/install.py --force
 不加选择参数时全部安装；加 `--skills`、`--context`、`--extensions`、`--binaries`、`--tools` 则只安装对应类别（可组合）：
 
 ```shell
-# 只更新 context 文件
+# 只更新 context 文件（Pi 的 APPEND_SYSTEM.md 与 DSH 的全局提示词）
 python scripts/install.py --context --force
 
 # 只安装技能
@@ -80,7 +80,7 @@ python scripts/install.py --tools --name browser-use
 ### 自定义安装目录
 
 ```shell
-python scripts/install.py --skills-dir /path/to/skills --pi-agent-dir /path/to/pi/agent
+python scripts/install.py --skills-dir /path/to/skills --pi-agent-dir /path/to/pi/agent --dsh-dir /path/to/dsh
 ```
 
 ### npm scripts 快捷方式
@@ -173,7 +173,8 @@ custom-skills/
 ├── scripts/
 │   └── install.py            # 全局安装脚本
 ├── context/
-│   └── APPEND_SYSTEM.md     # 追加到 Pi 系统提示词末尾，定义全局行为规则
+│   ├── APPEND_SYSTEM.md     # 追加到 Pi 系统提示词末尾，定义全局行为规则
+│   └── DSH_AGENTS.md        # 部署为 DSH 全局提示词 ~/.dsh/AGENTS.md
 ├── extensions/
 │   ├── notify.ts            # Pi 扩展 → ~/.pi/agent/extensions/
 │   ├── enable-core-tools.ts # 同上：激活 grep / find / ls
@@ -212,11 +213,12 @@ custom-skills/
 
 ### Context
 
-`context/` 目录下的 `.md` 文件会被复制到 `~/.pi/agent/`。命名为 `context` 而非 `prompts`，是为了与 Pi 自身的 `~/.pi/agent/prompts/`（提示词模板 / 斜杠命令）区分。目前支持：
+`context/` 目录下的 `.md` 文件会被复制到 `~/.pi/agent/`（DSH 专用文件除外，见下表）。命名为 `context` 而非 `prompts`，是为了与 Pi 自身的 `~/.pi/agent/prompts/`（提示词模板 / 斜杠命令）区分。目前支持：
 
 | 文件 | 作用 |
 |---|---|
 | `APPEND_SYSTEM.md` | 追加到 Pi 系统提示词末尾，定义全局行为规则 |
+| `DSH_AGENTS.md` | DSH 全局提示词，部署为 `~/.dsh/AGENTS.md`（节选自 `APPEND_SYSTEM.md` 的通用行为规范，不进 Pi 目录）；目标目录可用 `--dsh-dir` 自定义 |
 
 ### Extensions
 

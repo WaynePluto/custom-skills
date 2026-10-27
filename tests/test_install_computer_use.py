@@ -426,6 +426,7 @@ class ComputerUseMainRoutingTest(unittest.TestCase):
             mock.patch.object(install, "deploy_browser_use") as browser,
             mock.patch.object(install, "deploy_computer_use") as computer,
             mock.patch.object(install, "deploy_context") as context,
+            mock.patch.object(install, "deploy_dsh_context") as dsh,
             mock.patch.object(install, "configure_shell") as shell,
             mock.patch.object(install, "deploy_binaries") as binaries,
             mock.patch.object(install, "deploy_extensions") as extensions,
@@ -437,7 +438,7 @@ class ComputerUseMainRoutingTest(unittest.TestCase):
         node_check.assert_not_called()
         computer.assert_called_once_with(self.skills_dir)
         browser.assert_not_called()
-        for other in (context, shell, binaries, extensions, skills):
+        for other in (context, dsh, shell, binaries, extensions, skills):
             other.assert_not_called()
 
     def test_default_install_does_not_redeploy_tool_skills_generically(self):
@@ -450,6 +451,7 @@ class ComputerUseMainRoutingTest(unittest.TestCase):
             mock.patch.object(install, "check_python_prerequisite"),
             mock.patch.object(install, "check_prerequisites"),
             mock.patch.object(install, "deploy_context"),
+            mock.patch.object(install, "deploy_dsh_context"),
             mock.patch.object(install, "configure_shell"),
             mock.patch.object(install, "deploy_binaries"),
             mock.patch.object(install, "deploy_extensions"),
@@ -515,6 +517,7 @@ class ComputerUseMainRoutingTest(unittest.TestCase):
             mock.patch.object(install, "deploy_tools") as tools,
             mock.patch.object(install, "deploy_skills") as skills,
             mock.patch.object(install, "deploy_context") as context,
+            mock.patch.object(install, "deploy_dsh_context") as dsh,
             mock.patch.object(install, "configure_shell") as shell,
             mock.patch.object(install, "deploy_binaries") as binaries,
             mock.patch.object(install, "deploy_extensions") as extensions,
@@ -530,7 +533,7 @@ class ComputerUseMainRoutingTest(unittest.TestCase):
             "computer-use",
             False,
         )
-        for other in (context, shell, binaries, extensions):
+        for other in (context, dsh, shell, binaries, extensions):
             other.assert_not_called()
 
 

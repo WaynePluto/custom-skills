@@ -1,3 +1,5 @@
+# 全局行为规则
+
 ## 工具选择优先级
 
 - 有专用工具就不要用 `pwsh` 复刻：搜内容用 `grep`，找文件用 `find`，列目录用 `ls`，读文件用 `read`（`offset` / `limit` 分页），改文件用 `edit` / `write`。走 `pwsh` 会丢失截断保护、分页和 `.gitignore` 过滤。

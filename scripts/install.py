@@ -56,13 +56,18 @@ def dir_size_mb(path: Path) -> float:
 
 # ── Context ──
 
+# context/ 下 DSH 专用文件的部署映射：源文件名 → <dsh-dir>/ 下的目标文件名。
+# DSH 读取的是 ~/.dsh/AGENTS.md，目标文件名与仓库源文件不同，不能按原名复制。
+DSH_CONTEXT_FILES = {"DSH_AGENTS.md": "AGENTS.md"}
+
+
 def deploy_context(pi_agent_dir: Path, force: bool) -> None:
-    """将 context/ 目录下的文件部署到 Pi agent 目录。"""
+    """将 context/ 目录下的文件部署到 Pi agent 目录（DSH 专用文件除外）。"""
     context_dir = REPO_ROOT / "context"
     if not context_dir.exists():
         return
 
-    context_files = list(context_dir.glob("*.md"))
+    context_files = [p for p in context_dir.glob("*.md") if p.name not in DSH_CONTEXT_FILES]
     if not context_files:
         return
 
@@ -77,6 +82,33 @@ def deploy_context(pi_agent_dir: Path, force: bool) -> None:
             continue
         shutil.copy2(src, dest)
         print(f"  {src.name} → {dest}")
+
+
+def deploy_dsh_context(dsh_dir: Path, force: bool) -> None:
+    """将 context/ 下的 DSH 专用文件部署到 DSH 配置目录。
+
+    目前只有全局提示词 DSH_AGENTS.md → <dsh-dir>/AGENTS.md；与 Pi 的
+    context 文件共用 --context 类别和 --force 覆盖语义，随一键安装一起执行。
+    """
+    context_dir = REPO_ROOT / "context"
+    sources = {name: context_dir / name for name in DSH_CONTEXT_FILES}
+    if not any(src.exists() for src in sources.values()):
+        return
+
+    print(f"\n{'═' * 4} dsh {'═' * 4}")
+
+    dsh_dir.mkdir(parents=True, exist_ok=True)
+
+    for src_name, dest_name in DSH_CONTEXT_FILES.items():
+        src = sources[src_name]
+        if not src.exists():
+            continue
+        dest = dsh_dir / dest_name
+        if dest.exists() and not force:
+            print(f"  跳过 {src_name} → {dest}（已存在，使用 --force 覆盖）")
+            continue
+        shutil.copy2(src, dest)
+        print(f"  {src_name} → {dest}")
 
 
 # ── Shell ──
@@ -1334,11 +1366,19 @@ def main() -> None:
         help="Pi agent 配置目录路径",
     )
     parser.add_argument(
+        "--dsh-dir", type=Path,
+        default=Path.home() / ".dsh",
+        help="DSH 配置目录路径（context/DSH_AGENTS.md 部署为其中的 AGENTS.md）",
+    )
+    parser.add_argument(
         "--force", action="store_true",
         help="覆盖已存在的文件（不影响二进制：rg/fd 升级始终需要交互确认）",
     )
     parser.add_argument("--skills", action="store_true", help="安装技能")
-    parser.add_argument("--context", action="store_true", help="部署 context 文件（如 APPEND_SYSTEM.md）")
+    parser.add_argument(
+        "--context", action="store_true",
+        help="部署 context 文件（APPEND_SYSTEM.md → ~/.pi/agent/，DSH_AGENTS.md → ~/.dsh/AGENTS.md）",
+    )
     parser.add_argument("--extensions", action="store_true", help="部署扩展")
     parser.add_argument(
         "--binaries", action="store_true",
@@ -1398,6 +1438,7 @@ def main() -> None:
         deploy_context(args.pi_agent_dir, args.force)
         # APPEND_SYSTEM.md 假定工具 shell 为 pwsh，需同步配置 settings.json
         configure_shell(args.pi_agent_dir, args.force)
+        deploy_dsh_context(args.dsh_dir, args.force)
 
     # enable-core-tools 扩展激活的 grep/find 依赖 rg/fd，先备齐依赖再装扩展；
     # 缺失且下载失败会在这里中断，--force 不影响二进制升级（升级一律需要确认）

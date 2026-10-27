@@ -348,13 +348,14 @@ class DeployBrowserUseToolsTest(BrowserUseFixture):
             mock.patch.object(install, "check_prerequisites") as prerequisites,
             mock.patch.object(install, "deploy_skills") as skills,
             mock.patch.object(install, "deploy_context") as context,
+            mock.patch.object(install, "deploy_dsh_context") as dsh,
             mock.patch.object(install, "configure_shell") as shell,
             mock.patch.object(install, "deploy_extensions") as extensions,
             mock.patch.object(install, "deploy_binaries") as binaries,
         ):
             install.main()
         prerequisites.assert_called_once_with()
-        for other_deployment in (skills, context, shell, extensions, binaries):
+        for other_deployment in (skills, context, dsh, shell, extensions, binaries):
             other_deployment.assert_not_called()
 
     def test_tools_main_forces_full_deployment_not_only_skill_copy(self):
