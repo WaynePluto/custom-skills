@@ -1,8 +1,9 @@
 /**
  * 任务完成通知扩展
  *
- * Pi agent 真正停下来等待用户输入时（agent_settled），
- * 发送 Windows 系统 toast 通知；非 Windows 平台降级为 OSC 777 终端通知。
+ * agent_settled 表示一轮 run 结束（成功、出错或被中断都会触发），
+ * 仅在未被用户中断时发送通知；Windows 用系统 toast，
+ * 其他平台降级为 OSC 777 终端通知。
  */
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -16,15 +17,6 @@ function windowsToastScript(title: string, body: string): string {
 		`$texts = $xml.GetElementsByTagName('text')`,
 		`$texts.Item(0).AppendChild($xml.CreateTextNode('${title}')) > $null`,
 		`$texts.Item(1).AppendChild($xml.CreateTextNode('${body}')) > $null`,
-		// scenario=reminder 使通知持久显示，直到用户手动关闭；该场景要求至少一个按钮
-		`$xml.DocumentElement.SetAttribute('scenario', 'reminder')`,
-		`$actions = $xml.CreateElement('actions')`,
-		`$action = $xml.CreateElement('action')`,
-		`$action.SetAttribute('content', '关闭')`,
-		`$action.SetAttribute('arguments', 'dismiss')`,
-		`$action.SetAttribute('activationType', 'system')`,
-		`$actions.AppendChild($action) > $null`,
-		`$xml.DocumentElement.AppendChild($actions) > $null`,
 		`$toast = [${type}.ToastNotification]::new($xml)`,
 		`[${type}.ToastNotificationManager]::CreateToastNotifier('Pi Coding Agent').Show($toast)`,
 	].join("; ");
@@ -62,10 +54,12 @@ function notify(title: string, body: string): void {
 }
 
 export default function (pi: ExtensionAPI) {
-	pi.on("agent_settled", async (_event, ctx) => {
+	pi.on("agent_settled", async (event, ctx) => {
+		// 用户中断（Esc/Stop）触发的 settle 不算完成，不通知
+		if (event.aborted) return;
 		const project = ctx.cwd.replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? ctx.cwd;
 		const session = pi.getSessionName();
 		const title = session ? `Pi · ${project} · ${session}` : `Pi · ${project}`;
-		notify(sanitize(title), "任务已完成，等待输入");
+		notify(sanitize(title), "已就绪，等待输入");
 	});
 }
